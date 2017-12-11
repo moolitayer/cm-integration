@@ -78,7 +78,7 @@ popd
 
 pushd miq-app-frontend
 mv Dockerfile Dockerfile.orig
-sed "s/GHORG=ManageIQ/GHORG=${GITHUB_ORG}/g" < Dockerfile.orig | sed "s/FROM manageiq\/manageiq-pods:backend-latest/FROM containermgmt\/manageiq-pods:build-${BUILD_TIME}/g" > Dockerfile
+sed "s/GHORG=ManageIQ/GHORG=${GITHUB_ORG}/g" < Dockerfile.orig | sed "s/FROM manageiq\/manageiq-pods:backend-latest/FROM containermgmt\/manageiq-pods:backend-${BUILD_TIME}/g" > Dockerfile
 git diff Dockerfile
 git add Dockerfile
 popd
@@ -92,7 +92,11 @@ Automated image build ${BUILD_TIME}
 Using PRs:
 ${PRS_JSON}
 EOF
-git tag "build-${BUILD_TIME}"
+# We need two tags (instead of just one) to force the DockerHub automated build
+# to build two images from the same repository. It's a bit of a hack, but
+# that's what the ManageIQ people do for their builds as well.
+git tag "backend-${BUILD_TIME}"
+git tag "frontend-${BUILD_TIME}"
 git push --force --tags ${GITHUB_ORG} integration-build
 echo "Pushed manageiq-pods, 🐋dockerhub should do the rest."
 echo "Good luck! 👍"
