@@ -9,8 +9,9 @@ To add or remove a PR, use `manageiq_prs.py`,
 
 **Removing a PR**: `./manageiq_prs.py remove <repo>/<pr>` (for example `remove manageiq-api/76`)
 
-Please fork this repo, run the script to add a PR, and send the modified
-json file as a PR on this repo.
+1. Fork this repo.
+2. Run the script to add a PR.
+3. Send the modified json file as a PR on this repo.
 
 The script will verify the PR is open and mergeable, and add it to the json file.
 
@@ -23,7 +24,9 @@ get [a personal access token](https://github.com/settings/tokens) instead of usi
 
 ### Building the Image
 
-`./build.sh` will clone all the repos, apply all pending PRs, and push to our forks.
+**You should not run the build manually, there's a jenkins job for it**
+
+`./build.sh` clones all the repos, apply all pending PRs, and push to our forks.
 When it's done, it'll push the dockerfile to our fork of `manageiq-pods`, which should trigger
 DockerHub to run the build.
 
