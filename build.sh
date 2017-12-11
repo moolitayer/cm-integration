@@ -31,7 +31,7 @@ repos=$(jq "keys[]" -r "${PENDING_PRS}")
 
 for repo in ${repos}; do
     echo -e "\n\n\n** DOING REPO ${repo}**\n----------------------------------------------\n"
-    git clone "https://github.com/ManageIQ/${repo}" --depth 1
+    git clone "https://github.com/ManageIQ/${repo}"
     pushd "${repo}"
     git remote add "${GITHUB_ORG}" "git@github.com:${GITHUB_ORG}/${repo}"
 
@@ -70,7 +70,9 @@ echo "Modifying Dockerfiles..."
 
 pushd miq-app
 mv Dockerfile Dockerfile.orig
-sed "s/GHORG=ManageIQ/GHORG=${GITHUB_ORG}/g" < Dockerfile.orig > Dockerfile
+# Note: we modify the URL for the manageiq tarball instead of modifying REF
+# because we don't patch manageiq-appliance
+sed "s/GHORG=ManageIQ/GHORG=${GITHUB_ORG}/g" < Dockerfile.orig | sed 's/manageiq\/tarball\/${REF}/manageiq\/tarball\/image-unstable/g' > Dockerfile
 echo "Modified miq-app dockerfile"
 git diff Dockerfile
 git add Dockerfile
@@ -78,7 +80,8 @@ popd
 
 pushd miq-app-frontend
 mv Dockerfile Dockerfile.orig
-sed "s/GHORG=ManageIQ/GHORG=${GITHUB_ORG}/g" < Dockerfile.orig | sed "s/FROM manageiq\/manageiq-pods:backend-latest/FROM containermgmt\/manageiq-pods:backend-${BUILD_TIME}/g" > Dockerfile
+# Not setting GHORG here because we don't patch manageiq-ui-service
+sed "s/FROM manageiq\/manageiq-pods:backend-latest/FROM containermgmt\/manageiq-pods:backend-${BUILD_TIME}/g" < Dockerfile.orig > Dockerfile
 git diff Dockerfile
 git add Dockerfile
 popd
