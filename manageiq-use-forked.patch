@@ -18,7 +18,7 @@ index 9028e563e6..3b1022b145 100644
  
 +def cm_integration_plugin(plugin_name)
 +  unless dependencies.detect { |d| d.name == plugin_name }
-+    gem plugin_name, :git => "https://github.com/cm-integration/#{plugin_name}", :branch => "image-unstable"
++    gem plugin_name, :git => "https://github.com/container-mgmt/#{plugin_name}", :branch => "image-unstable"
 +  end
 +end
 +
