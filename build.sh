@@ -7,7 +7,8 @@ set -o pipefail # prevent errors in a pipeline from being masked
 
 BRANCH=image-unstable
 PENDING_PRS=${PWD}/pending-prs-unstable.json
-BASEDIR=${PWD}/manageiq-unstable
+BUILD_ID=${BUILD_ID:-}
+BASEDIR=${PWD}/manageiq-unstable${BUILD_ID}
 CORE_REPO=manageiq
 GITHUB_ORG=container-mgmt
 PRS_JSON=$(jq -Mc . "${PENDING_PRS}")
