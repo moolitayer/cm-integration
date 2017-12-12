@@ -30,7 +30,7 @@ Usage:
 Options:
   -h --help     Show this screen.
 
-Set the GH_USER and GH_PASS environment variables if you need authentication.
+Set the GIT_USER and GIT_PASSWORD environment variables if you need authentication.
 """
 
 from __future__ import print_function, unicode_literals
@@ -43,8 +43,8 @@ API_URL = "https://api.github.com/repos/ManageIQ/{repo}/pulls/{id}"
 PRS_JSON = "pending-prs-unstable.json"
 
 # Support basic github authentication from environment variables
-GH_USER = os.getenv("GH_USER", None)
-GH_PASS = os.getenv("GH_PASS", None)
+GH_USER = os.getenv("GIT_USER", None)
+GH_PASS = os.getenv("GIT_PASSWORD", None)
 GH_AUTH = (GH_USER, GH_PASS) if GH_USER and GH_PASS else None
 
 
