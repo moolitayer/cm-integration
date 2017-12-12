@@ -148,17 +148,6 @@ EOF
 # that's what the ManageIQ people do for their builds as well.
 git tag "backend-${BUILD_TIME}"
 git tag "frontend-${BUILD_TIME}"
-# Also tag both tags with "latest", so we can tell DockerHub to also build
-# another image that will be marked as "latest".
-
-# delete the tags first, locally and remotely, so we can overwrite them
-git tag -d "backend-latest"
-git tag -d "frontend-latest"
-git push ${GITHUB_ORG} :refs/tags/backend-latest
-git push ${GITHUB_ORG} :refs/tags/frontend-latest
-
-git tag "backend-latest"
-git tag "frontend-latest"
 git push --force --tags ${GITHUB_ORG} integration-build
 echo "Pushed manageiq-pods, 🐋dockerhub should do the rest."
 echo "Good luck! 👍"
