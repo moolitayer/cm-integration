@@ -147,6 +147,8 @@ EOF
 # to build two images from the same repository. It's a bit of a hack, but
 # that's what the ManageIQ people do for their builds as well.
 git tag "backend-${BUILD_TIME}"
+git push --force --tags ${GITHUB_ORG} integration-build
+sleep 15  # HACK: push the backend tag first in hopes DockerHub will build it before building the frontend tag
 git tag "frontend-${BUILD_TIME}"
 git push --force --tags ${GITHUB_ORG} integration-build
 echo "Pushed manageiq-pods, 🐋dockerhub should do the rest."
