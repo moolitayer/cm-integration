@@ -104,6 +104,7 @@ popd
 # but for now, this will work, assuming nobody is going to run this script while a docker build is running
 git commit -F- <<EOF
 Automated image build ${BUILD_TIME}
+Jenkins ID: ${BUILD_ID}
 
 Using PRs:
 ${PRS_JSON}
@@ -115,6 +116,10 @@ EOF
 # that's what the ManageIQ people do for their builds as well.
 git tag "backend-${BUILD_TIME}"
 git tag "frontend-${BUILD_TIME}"
+# Also tag both tags with "latest", so we can tell DockerHub to also build
+# another image that will be marked as "latest".
+git tag "backend-latest"
+git tag "frontend-latest"
 git push --force --tags ${GITHUB_ORG} integration-build
 echo "Pushed manageiq-pods, 🐋dockerhub should do the rest."
 echo "Good luck! 👍"
