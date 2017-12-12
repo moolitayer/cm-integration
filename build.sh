@@ -8,7 +8,7 @@ set -o pipefail # prevent errors in a pipeline from being masked
 BRANCH=image-unstable
 PENDING_PRS=${PWD}/pending-prs-unstable.json
 BUILD_ID=${BUILD_ID:-}
-BASEDIR=${PWD}/manageiq-unstable${BUILD_ID}
+BASEDIR=${PWD}/manageiq-unstable
 CORE_REPO=manageiq
 GITHUB_ORG=container-mgmt
 PRS_JSON=$(jq -Mc . "${PENDING_PRS}")
@@ -26,7 +26,9 @@ if [ -z "${GIT_PASSWORD}" ]; then
 fi
 set -u # disallow undefined variables again
 
-mkdir "${BASEDIR}"
+if [ ! -d "${BASEDIR}" ]; then
+    mkdir "${BASEDIR}"
+fi
 cd "${BASEDIR}"
 
 # Read repo list from the pending PRs json
@@ -34,25 +36,36 @@ repos=$(jq "keys[]" -r "${PENDING_PRS}")
 
 for repo in ${repos}; do
     echo -e "\n\n\n** DOING REPO ${repo}**\n----------------------------------------------\n"
-    git clone "https://github.com/ManageIQ/${repo}"
-    pushd "${repo}"
+    if [ -d "${repo}" ]; then
+        echo "${repo} is already cloned, updating"
+        pushd "${repo}"
+        # Clean up the repo and make sure it's in sync with upstream master
+        git checkout master
+        git clean -xdf
+        git reset HEAD --hard
+        git branch -D ${BRANCH}
+        git pull origin master
+    else
+        git clone "https://github.com/ManageIQ/${repo}"
+        pushd "${repo}"
+        git remote add "${GITHUB_ORG}" "git@github.com:${GITHUB_ORG}/${repo}"
+    fi
 
     # Save the HEAD ref, so we know which upstream commit was the latest
     # when we rolled the build.
     MASTER_HEAD=$(git rev-parse --short HEAD)
-    COMMITSTR="${COMMITSTR}\n${repo} master HEAD was ${MASTER_HEAD}"
+    echo "Master is: ${MASTER_HEAD}"
+    COMMITSTR="${COMMITSTR}"$'\n'"${repo} master HEAD was ${MASTER_HEAD}"
 
     # tag this HEAD to mark it was the HEAD for the current BUILD_TIME
     git tag "head-${BUILD_TIME}"
     # make sure our master is up to date with upstream, so the tag would be meaningful
     git push --tags ${GITHUB_ORG} master
 
-    git remote add "${GITHUB_ORG}" "git@github.com:${GITHUB_ORG}/${repo}"
-
     #weird bash hack
     string_escaped_repo=\"${repo}\"
 
-    git checkout -b image-unstable
+    git checkout -b ${BRANCH}
     if [ "${repo}" == "${CORE_REPO}" ]; then
         # Patch the Gemfile to load plugins from our forks instead of upstream
         git am ../../manageiq-use-forked.patch
@@ -71,18 +84,38 @@ for repo in ${repos}; do
 done
 
 echo "Cloning manageiq-pods..."
-# FIXME: the clone URL for ManageIQ pods should be changed to upstream
-# once the PR is merged: https://github.com/ManageIQ/manageiq-pods/pull/252
-git clone "https://github.com/elad661/manageiq-pods" -bghorg_arg
-pushd manageiq-pods
-git remote add "${GITHUB_ORG}" "git@github.com:${GITHUB_ORG}/manageiq-pods"
-git checkout -b integration-build
+if [ -d "manageiq-pods" ]; then
+    pushd manageiq-pods
+    git checkout ghorg_arg  # FIXME this should be master
+    git clean -xdf
+    git reset HEAD --hard
+    git pull origin master
+else
+    # FIXME: the clone URL for ManageIQ pods should be changed to upstream
+    # once the PR is merged: https://github.com/ManageIQ/manageiq-pods/pull/252
+    git clone "https://github.com/elad661/manageiq-pods" -bghorg_arg
+    pushd manageiq-pods
+    git remote add "${GITHUB_ORG}" "git@github.com:${GITHUB_ORG}/manageiq-pods"
+fi
 pushd images
 
-echo "Modifying Dockerfiles..."
+echo -e "\nModifying Dockerfiles...\n"
+
+# Copy dockerfiles from master to use as base for modifications
+pushd miq-app
+cp Dockerfile Dockerfile.orig
+popd
+pushd miq-app-frontend
+cp Dockerfile Dockerfile.orig
+popd
+
+# Now checkout the integration-build branch so we can update the dockerfiles
+# in a way that keeps their git history
+
+git fetch "${GITHUB_ORG}"
+git checkout integration-build
 
 pushd miq-app
-mv Dockerfile Dockerfile.orig
 # Note: we modify the URL for the manageiq tarball instead of modifying REF
 # because we don't patch manageiq-appliance
 sed "s/GHORG=ManageIQ/GHORG=${GITHUB_ORG}/g" < Dockerfile.orig | sed 's/manageiq\/tarball\/${REF}/manageiq\/tarball\/image-unstable/g' > Dockerfile
@@ -92,7 +125,6 @@ git add Dockerfile
 popd
 
 pushd miq-app-frontend
-mv Dockerfile Dockerfile.orig
 # Not setting GHORG here because we don't patch manageiq-ui-service
 sed "s/FROM manageiq\/manageiq-pods:backend-latest/FROM containermgmt\/manageiq-pods:backend-${BUILD_TIME}/g" < Dockerfile.orig > Dockerfile
 git diff Dockerfile
@@ -118,6 +150,13 @@ git tag "backend-${BUILD_TIME}"
 git tag "frontend-${BUILD_TIME}"
 # Also tag both tags with "latest", so we can tell DockerHub to also build
 # another image that will be marked as "latest".
+
+# delete the tags first, locally and remotely, so we can overwrite them
+git tag -d "backend-latest"
+git tag -d "frontend-latest"
+git push ${GITHUB_ORG} :refs/tags/backend-latest
+git push ${GITHUB_ORG} :refs/tags/frontend-latest
+
 git tag "backend-latest"
 git tag "frontend-latest"
 git push --force --tags ${GITHUB_ORG} integration-build
