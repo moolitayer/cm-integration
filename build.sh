@@ -12,6 +12,8 @@ BASEDIR=${PWD}/manageiq-unstable${BUILD_ID}
 CORE_REPO=manageiq
 GITHUB_ORG=container-mgmt
 PRS_JSON=$(jq -Mc . "${PENDING_PRS}")
+BUILD_TIME=$(date +%Y%m%d-%H%M)
+COMMITSTR=""
 
 # Even when push is done with deploy keys, we need username and password
 # or access token to avoid API rate limits
@@ -34,6 +36,17 @@ for repo in ${repos}; do
     echo -e "\n\n\n** DOING REPO ${repo}**\n----------------------------------------------\n"
     git clone "https://github.com/ManageIQ/${repo}"
     pushd "${repo}"
+
+    # Save the HEAD ref, so we know which upstream commit was the latest
+    # when we rolled the build.
+    MASTER_HEAD=$(git rev-parse --short HEAD)
+    COMMITSTR="${COMMITSTR}\n${repo} master HEAD was ${MASTER_HEAD}"
+
+    # tag this HEAD to mark it was the HEAD for the current BUILD_TIME
+    git tag "head-${BUILD_TIME}"
+    # make sure our master is up to date with upstream, so the tag would be meaningful
+    git push --tags ${GITHUB_ORG} master
+
     git remote add "${GITHUB_ORG}" "git@github.com:${GITHUB_ORG}/${repo}"
 
     #weird bash hack
@@ -52,7 +65,7 @@ for repo in ${repos}; do
     done
 
     echo -e "\n\n\n** PUSHING REPO ${repo}**\n----------------------------------------------\n"
-    git push --set-upstream "${GITHUB_ORG}" ${BRANCH} --force
+    git push --set-upstream --tags "${GITHUB_ORG}" ${BRANCH} --force
     echo -e "\n** FINISHED REPO ${repo} **\n---------------------------------------------- \n"
     popd
 done
@@ -60,7 +73,6 @@ done
 echo "Cloning manageiq-pods..."
 # FIXME: the clone URL for ManageIQ pods should be changed to upstream
 # once the PR is merged: https://github.com/ManageIQ/manageiq-pods/pull/252
-BUILD_TIME=$(date +%Y%m%d-%H%M)
 git clone "https://github.com/elad661/manageiq-pods" -bghorg_arg
 pushd manageiq-pods
 git remote add "${GITHUB_ORG}" "git@github.com:${GITHUB_ORG}/manageiq-pods"
@@ -95,6 +107,8 @@ Automated image build ${BUILD_TIME}
 
 Using PRs:
 ${PRS_JSON}
+
+Base refs: ${COMMITSTR}
 EOF
 # We need two tags (instead of just one) to force the DockerHub automated build
 # to build two images from the same repository. It's a bit of a hack, but
