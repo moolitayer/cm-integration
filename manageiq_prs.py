@@ -34,10 +34,11 @@ Set the GIT_USER and GIT_PASSWORD environment variables if you need authenticati
 """
 
 from __future__ import print_function, unicode_literals
-import requests
+import collections
 import json
-import sys
 import os
+import requests
+import sys
 from docopt import docopt
 API_URL = "https://api.github.com/repos/ManageIQ/{repo}/pulls/{id}"
 PRS_JSON = "pending-prs-unstable.json"
@@ -147,7 +148,7 @@ def remove_merged(current):
 def main():
     arguments = docopt(__doc__)
     with open(PRS_JSON, 'r') as f:
-        current = json.load(f)
+        current = json.load(f, object_pairs_hook=collections.OrderedDict)
 
     if arguments["check"]:
         # Check current json
@@ -177,14 +178,14 @@ def main():
         else:
             exitstr = None
             # Check if the PR can be added
+            if not info["mergeable"]:
+                exitstr = "❌  {repo} PR #{pr} is not mergeable"
             if info["merged"]:
                 exitstr = "❌  {repo} PR #{pr} is already merged"
             if info["state"] != "open":
                 exitstr = "❌  {repo} PR #{pr} is not open"
             if pr in current[repo]:
                 exitstr = "❌  {repo} PR #{pr} is already listed"
-            if not info["mergeable"]:
-                exitstr = "❌  {repo} PR #{pr} is not mergeable"
 
             if exitstr:
                 # error found, exit
