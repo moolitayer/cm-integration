@@ -14,6 +14,8 @@ GITHUB_ORG=container-mgmt
 PRS_JSON=$(jq -Mc . "${PENDING_PRS}")
 BUILD_TIME=$(date +%Y%m%d-%H%M)
 COMMITSTR=""
+TAG="patched-${BUILD_TIME}"
+export TAG  # needs to be exported for use with envsubst later
 
 # Even when push is done with deploy keys, we need username and password
 # or access token to avoid API rate limits
@@ -71,7 +73,8 @@ for repo in ${repos}; do
     git checkout -b ${BRANCH}
     if [ "${repo}" == "${CORE_REPO}" ]; then
         # Patch the Gemfile to load plugins from our forks instead of upstream
-        git am ../../manageiq-use-forked.patch
+        envsubst < ../../manageiq-use-forked.patch.in > manageiq-use-forked.patch
+        git am manageiq-use-forked.patch
     fi
     for pr in $(jq ".${string_escaped_repo}[]" -r < "${PENDING_PRS}"); do
         git fetch origin "pull/${pr}/head"
@@ -81,6 +84,7 @@ for repo in ${repos}; do
     done
 
     echo -e "\n\n\n** PUSHING REPO ${repo}**\n----------------------------------------------\n"
+    git tag "${TAG}"
     git push --set-upstream --tags "${GITHUB_ORG}" ${BRANCH} --force
     echo -e "\n** FINISHED REPO ${repo} **\n---------------------------------------------- \n"
     popd
@@ -134,9 +138,6 @@ git diff Dockerfile
 git add Dockerfile
 popd
 
-# FIXME for later:
-# *actually* make sure each docker build contains just the PRs we wanted by using tags/named branches on the varius manageiq repos
-# but for now, this will work, assuming nobody is going to run this script while a docker build is running
 git commit -F- <<EOF
 Automated image build ${BUILD_TIME}
 Jenkins ID: ${BUILD_ID}
