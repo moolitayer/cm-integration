@@ -26,6 +26,9 @@ if [ -z "${GIT_PASSWORD}" ]; then
 fi
 set -u # disallow undefined variables again
 
+# Remove merged PRs from the list to avoid conflicts
+LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 python2 manageiq_prs.py remove_merged
+
 if [ ! -d "${BASEDIR}" ]; then
     mkdir "${BASEDIR}"
 fi

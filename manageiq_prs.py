@@ -48,6 +48,11 @@ GH_USER = os.getenv("GIT_USER", None)
 GH_PASS = os.getenv("GIT_PASSWORD", None)
 GH_AUTH = (GH_USER, GH_PASS) if GH_USER and GH_PASS else None
 
+if sys.version_info.major < 3:
+    # hack to make this work with py2
+    reload(sys)
+    sys.setdefaultencoding('utf8')
+
 
 def color(string, color):
     """ Return the input string with color escape codes """
