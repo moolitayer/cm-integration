@@ -13,6 +13,7 @@ CORE_REPO=manageiq
 GITHUB_ORG=container-mgmt
 PRS_JSON=$(jq -Mc . "${PENDING_PRS}")
 BUILD_TIME=$(date +%Y%m%d-%H%M)
+SCRIPT_PATH=$(pwd)
 COMMITSTR=""
 TAG="patched-${BUILD_TIME}"
 export TAG  # needs to be exported for use with envsubst later
@@ -155,5 +156,8 @@ git push --force --tags ${GITHUB_ORG} integration-build
 sleep 15  # HACK: push the backend tag first in hopes DockerHub will build it before building the frontend tag
 git tag "frontend-${BUILD_TIME}"
 git push --force --tags ${GITHUB_ORG} integration-build
-echo "Pushed manageiq-pods, 🐋dockerhub should do the rest."
-echo "Good luck! 👍"
+echo "Pushed manageiq-pods, 🐋dockerhub/dockercloud should do the rest."
+cd "${SCRIPT_PATH}"
+if [ ! -z "${DOCKERCLOUD_PASS}" ]; then
+    LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 python2 poll_dockercloud.py "${BUILD_TIME}"
+fi
