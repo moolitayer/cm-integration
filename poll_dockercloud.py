@@ -1,4 +1,5 @@
 #!/bin/env/python3
+# -*- coding: utf-8 -*-
 # poll_dockercloud.py - Poll dockercloud to get build status
 #
 # Copyright © 2017 Red Hat Inc.
@@ -27,12 +28,19 @@ Options:
 
 Set the DOCKERCLOUD_USER and DOCKERCLOUD_PASS environment variables for authenticatation.
 """
+from __future__ import print_function, unicode_literals
 
-import requests
+import json
 import os
+import requests
+import sys
 from time import sleep
 from docopt import docopt
-import json
+
+if sys.version_info.major < 3:
+    # hack to make this work with py2
+    reload(sys)
+    sys.setdefaultencoding('utf8')
 
 DOCKERCLOUD_USER = os.getenv("DOCKERCLOUD_USER", None)
 DOCKERCLOUD_PASS = os.getenv("DOCKERCLOUD_PASS", None)
@@ -55,7 +63,8 @@ def poll_both_builds(build_id):
         state = response_json["state"]
         if state == "Success" and build_tag_exists(build_id):
             raise SystemExit(0)
-        print(".", end="", flush=True)
+        print(".", end="")
+        sys.stdout.flush()
 
     backend, frontend = None, None
     for partial_url in response_json['build_settings']:
@@ -66,7 +75,7 @@ def poll_both_builds(build_id):
             backend = url
         else:
             frontend = url
-    print("\nWaiting for backend build...", flush=True)
+    print("\nWaiting for backend build...")
     if poll_build_status(backend, build_id):
         print("\nBackend build complete! Waiting for frontend build...")
         poll_build_status(frontend, build_id, True)
@@ -79,7 +88,8 @@ def poll_build_status(url, build_id, wait_for_tag=False):
         sleep(5)
         response = requests.get(url, auth=AUTH)
         response.raise_for_status()
-        print(".", end="", flush=True)
+        print(".", end="")
+        sys.stdout.flush()
         state = response.json()["state"]
         if wait_for_tag:
             if state == "Success" and not build_tag_exists(build_id):
