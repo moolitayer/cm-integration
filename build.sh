@@ -11,6 +11,7 @@ BUILD_ID=${BUILD_ID:-}
 BASEDIR=${PWD}/manageiq-unstable
 CORE_REPO=manageiq
 GITHUB_ORG=container-mgmt
+LOCAL_REGISTRY=${LOCAL_REGISTRY:-}
 PRS_JSON=$(jq -Mc . "${PENDING_PRS}")
 BUILD_TIME=$(date +%Y%m%d-%H%M)
 SCRIPT_PATH=$(pwd)
@@ -161,3 +162,12 @@ cd "${SCRIPT_PATH}"
 if [ ! -z "${DOCKERCLOUD_PASS}" ]; then
     LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 python2 poll_dockercloud.py "${BUILD_TIME}"
 fi
+
+if [ ! -z "${LOCAL_REGISTRY}" ]; then
+    echo "Pulling image..."
+    docker pull containermgmt/manageiq-pods
+    echo "Pushing to local registry..."
+    docker tag containermgmt/manageiq-pods "${LOCAL_REGISTRY}/containermgmt/manageiq-pods"
+    docker push "${LOCAL_REGISTRY}/containermgmt/manageiq-pods"
+fi
+echo "Done!"
