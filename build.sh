@@ -75,7 +75,7 @@ for repo in ${repos}; do
     if [ "${repo}" == "${CORE_REPO}" ]; then
         # Patch the Gemfile to load plugins from our forks instead of upstream
         envsubst < ../../manageiq-use-forked.patch.in > manageiq-use-forked.patch
-        git am manageiq-use-forked.patch
+        git am --3way manageiq-use-forked.patch
     fi
     for pr in $(jq ".${string_escaped_repo}[]" -r < "${PENDING_PRS}"); do
         git fetch origin "pull/${pr}/head"
